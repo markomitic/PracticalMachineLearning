@@ -97,12 +97,12 @@ validationSet &lt;- trainData[-inTrain, ]</code></pre>
 </div>
 <div id="data-cleaning-and-feature-creation" class="section level2">
 <h2>Data Cleaning and Feature Creation</h2>
-<p>Some of the variables are of no use to us, such as user_name, new_window etc and they would just affect our model negatively so we’re removing them. These columns are: user_name raw_timestamp_part_1 raw_timestamp_part_2 cvtd_timestamp new_window num_window</p>
-<p>So first 6 columns plus the first with seq numbers. Also we’re removing columns with nearly zero variance and those that are mostly NA (90%)</p>
+<p>Some of the variables are of no use to us, such as user_name, new_window etc and they would just affect our model negatively so we’re removing them. These columns are: user_name raw_timestamp_part_1 raw_timestamp_part_2 cvtd_timestamp</p>
+<p>So the first 4 columns plus the first with seq numbers. Also we’re removing columns with nearly zero variance and those that are mostly NA (90%)</p>
 <p>Note that we’re removing those same columns from the testing/validation set.</p>
 <pre class="r"><code># Removing the first 7 columns that don't affect prediction
-trainingSet &lt;- trainingSet[, -(1:7)]
-validationSet &lt;- validationSet[, -(1:7)]
+trainingSet &lt;- trainingSet[, -(1:5)]
+validationSet &lt;- validationSet[, -(1:5)]
 
 # Removing columns with nearly zero variance
 nearZeroVarInd &lt;- nearZeroVar(trainingSet)
@@ -112,7 +112,28 @@ validationSet &lt;- validationSet[, -nearZeroVarInd]
 # Removing columns those that are almost always NA
 NAindices &lt;- sapply(trainingSet, function(x) mean(is.na(x))) &gt; 0.90
 trainingSet &lt;- trainingSet[, NAindices==F]
-validationSet &lt;- validationSet[, NAindices==F]</code></pre>
+validationSet &lt;- validationSet[, NAindices==F]
+
+# Feauture list
+names(trainingSet)</code></pre>
+<pre><code>##  [1] &quot;num_window&quot;           &quot;roll_belt&quot;            &quot;pitch_belt&quot;          
+##  [4] &quot;yaw_belt&quot;             &quot;total_accel_belt&quot;     &quot;gyros_belt_x&quot;        
+##  [7] &quot;gyros_belt_y&quot;         &quot;gyros_belt_z&quot;         &quot;accel_belt_x&quot;        
+## [10] &quot;accel_belt_y&quot;         &quot;accel_belt_z&quot;         &quot;magnet_belt_x&quot;       
+## [13] &quot;magnet_belt_y&quot;        &quot;magnet_belt_z&quot;        &quot;roll_arm&quot;            
+## [16] &quot;pitch_arm&quot;            &quot;yaw_arm&quot;              &quot;total_accel_arm&quot;     
+## [19] &quot;gyros_arm_x&quot;          &quot;gyros_arm_y&quot;          &quot;gyros_arm_z&quot;         
+## [22] &quot;accel_arm_x&quot;          &quot;accel_arm_y&quot;          &quot;accel_arm_z&quot;         
+## [25] &quot;magnet_arm_x&quot;         &quot;magnet_arm_y&quot;         &quot;magnet_arm_z&quot;        
+## [28] &quot;roll_dumbbell&quot;        &quot;pitch_dumbbell&quot;       &quot;yaw_dumbbell&quot;        
+## [31] &quot;total_accel_dumbbell&quot; &quot;gyros_dumbbell_x&quot;     &quot;gyros_dumbbell_y&quot;    
+## [34] &quot;gyros_dumbbell_z&quot;     &quot;accel_dumbbell_x&quot;     &quot;accel_dumbbell_y&quot;    
+## [37] &quot;accel_dumbbell_z&quot;     &quot;magnet_dumbbell_x&quot;    &quot;magnet_dumbbell_y&quot;   
+## [40] &quot;magnet_dumbbell_z&quot;    &quot;roll_forearm&quot;         &quot;pitch_forearm&quot;       
+## [43] &quot;yaw_forearm&quot;          &quot;total_accel_forearm&quot;  &quot;gyros_forearm_x&quot;     
+## [46] &quot;gyros_forearm_y&quot;      &quot;gyros_forearm_z&quot;      &quot;accel_forearm_x&quot;     
+## [49] &quot;accel_forearm_y&quot;      &quot;accel_forearm_z&quot;      &quot;magnet_forearm_x&quot;    
+## [52] &quot;magnet_forearm_y&quot;     &quot;magnet_forearm_z&quot;     &quot;classe&quot;</code></pre>
 </div>
 <div id="model-building" class="section level2">
 <h2>Model Building</h2>
@@ -120,27 +141,25 @@ validationSet &lt;- validationSet[, NAindices==F]</code></pre>
 <pre class="r"><code>fitControl &lt;- trainControl(method=&quot;cv&quot;, number=3, verboseIter=F)
 
 # Model fit
-fit &lt;- train(classe ~ ., data=trainingSet, method=&quot;rf&quot;, trControl=fitControl)</code></pre>
-<pre><code>## Loading required package: randomForest
-## randomForest 4.6-10
-## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<pre class="r"><code># Shows final model tuning parameters
+fit &lt;- train(classe ~ ., data=trainingSet, method=&quot;rf&quot;, trControl=fitControl)
+
+# Shows final model tuning parameters
 fit$finalModel</code></pre>
 <pre><code>## 
 ## Call:
 ##  randomForest(x = x, y = y, mtry = param$mtry) 
 ##                Type of random forest: classification
 ##                      Number of trees: 500
-## No. of variables tried at each split: 2
+## No. of variables tried at each split: 27
 ## 
-##         OOB estimate of  error rate: 0.71%
+##         OOB estimate of  error rate: 0.25%
 ## Confusion matrix:
-##      A    B    C    D    E class.error
-## A 3901    3    1    0    1 0.001280082
-## B   13 2638    7    0    0 0.007524454
-## C    0   23 2369    4    0 0.011268781
-## D    0    0   37 2213    2 0.017317940
-## E    0    0    1    6 2518 0.002772277</code></pre>
+##      A    B    C    D    E  class.error
+## A 3904    1    0    0    1 0.0005120328
+## B    7 2648    3    0    0 0.0037622272
+## C    0    6 2390    0    0 0.0025041736
+## D    0    0   11 2241    0 0.0048845471
+## E    0    0    0    6 2519 0.0023762376</code></pre>
 </div>
 <div id="model-evaluation" class="section level2">
 <h2>Model Evaluation</h2>
@@ -154,41 +173,41 @@ confusionMatrix(validationSet$classe, validationPredictions)</code></pre>
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1673    1    0    0    0
-##          B    6 1132    1    0    0
-##          C    0   14 1012    0    0
-##          D    0    0   21  942    1
+##          A 1674    0    0    0    0
+##          B    3 1135    0    1    0
+##          C    0    4 1022    0    0
+##          D    0    0    3  960    1
 ##          E    0    0    0    0 1082
 ## 
 ## Overall Statistics
-##                                         
-##                Accuracy : 0.9925        
-##                  95% CI : (0.99, 0.9946)
-##     No Information Rate : 0.2853        
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16     
-##                                         
-##                   Kappa : 0.9905        
-##  Mcnemar's Test P-Value : NA            
+##                                           
+##                Accuracy : 0.998           
+##                  95% CI : (0.9964, 0.9989)
+##     No Information Rate : 0.285           
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9974          
+##  Mcnemar's Test P-Value : NA              
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.9964   0.9869   0.9787   1.0000   0.9991
-## Specificity            0.9998   0.9985   0.9971   0.9955   1.0000
-## Pos Pred Value         0.9994   0.9939   0.9864   0.9772   1.0000
-## Neg Pred Value         0.9986   0.9968   0.9955   1.0000   0.9998
-## Prevalence             0.2853   0.1949   0.1757   0.1601   0.1840
-## Detection Rate         0.2843   0.1924   0.1720   0.1601   0.1839
+## Sensitivity            0.9982   0.9965   0.9971   0.9990   0.9991
+## Specificity            1.0000   0.9992   0.9992   0.9992   1.0000
+## Pos Pred Value         1.0000   0.9965   0.9961   0.9959   1.0000
+## Neg Pred Value         0.9993   0.9992   0.9994   0.9998   0.9998
+## Prevalence             0.2850   0.1935   0.1742   0.1633   0.1840
+## Detection Rate         0.2845   0.1929   0.1737   0.1631   0.1839
 ## Detection Prevalence   0.2845   0.1935   0.1743   0.1638   0.1839
-## Balanced Accuracy      0.9981   0.9927   0.9879   0.9978   0.9995</code></pre>
+## Balanced Accuracy      0.9991   0.9978   0.9981   0.9991   0.9995</code></pre>
 <p>The accuracy is 99.8% so the out-of-sample error is 0.2%.</p>
 </div>
 <div id="training-the-full-model" class="section level2">
 <h2>Training the full model</h2>
 <p>Because we’re ok with our estimated out of sample error, we will now train the full model, with all the training data and use that model to make predictions on the real out of sample data. First we will clean the data in the sam way as we did before.</p>
 <pre class="r"><code># Removing the first 7 columns that don't affect prediction
-train &lt;- trainData[, -(1:7)]
-test &lt;- testData[, -(1:7)]
+train &lt;- trainData[, -(1:5)]
+test &lt;- testData[, -(1:5)]
 
 # Removing columns with nearly zero variance
 nearZeroVarInd &lt;- nearZeroVar(train)

@@ -39,10 +39,8 @@ Some of the variables are of no use to us, such as user_name, new_window etc and
  raw_timestamp_part_1
  raw_timestamp_part_2
  cvtd_timestamp
- new_window
- num_window
 
-So first 6 columns plus the first with seq numbers. 
+So the first 4 columns plus the first with seq numbers. 
 Also we're removing columns with nearly zero variance and those that are mostly NA (90%)
 
 Note that we're removing those same columns from the testing/validation set.
@@ -50,8 +48,8 @@ Note that we're removing those same columns from the testing/validation set.
 
 ```{r}
 # Removing the first 7 columns that don't affect prediction
-trainingSet <- trainingSet[, -(1:7)]
-validationSet <- validationSet[, -(1:7)]
+trainingSet <- trainingSet[, -(1:5)]
+validationSet <- validationSet[, -(1:5)]
 
 # Removing columns with nearly zero variance
 nearZeroVarInd <- nearZeroVar(trainingSet)
@@ -62,13 +60,17 @@ validationSet <- validationSet[, -nearZeroVarInd]
 NAindices <- sapply(trainingSet, function(x) mean(is.na(x))) > 0.90
 trainingSet <- trainingSet[, NAindices==F]
 validationSet <- validationSet[, NAindices==F]
+
+# Feauture list
+names(trainingSet)
 ```
 
-## Model Building 
+## Model Building
+
 Now creating a model to predict the classe using a Random Forest model which should give us a pretty good results.
 Also using a 3-fold cross-validation to select best model parameters.
 
-```{r warning=F}
+```{r message=F, warning=F}
 fitControl <- trainControl(method="cv", number=3, verboseIter=F)
 
 # Model fit
@@ -89,16 +91,17 @@ validationPredictions <- predict(fit, newdata=validationSet)
 confusionMatrix(validationSet$classe, validationPredictions)
 ```
 
-The accuracy is 99.25% so the out-of-sample error is 0.75%.
+The accuracy is 99.8% so the out-of-sample error is 0.2%.
 
 ## Training the full model
+
 Because we're ok with our estimated out of sample error, we will now train the full model, with all the training data and use that model to make predictions on the real out of sample data. First we will clean the data in the sam way as we did before. 
 
 ```{r message=F, warning=F}
 
 # Removing the first 7 columns that don't affect prediction
-train <- trainData[, -(1:7)]
-test <- testData[, -(1:7)]
+train <- trainData[, -(1:5)]
+test <- testData[, -(1:5)]
 
 # Removing columns with nearly zero variance
 nearZeroVarInd <- nearZeroVar(train)
@@ -116,6 +119,7 @@ fit <- train(classe ~ ., data=train, method="rf", trControl=fitControl)
 ```
 
 ## Making Predictions
+
 Applying the machine learning model to each of the 20 test cases in the testing data set.
 ```{r}
 # Predicting on a test set
