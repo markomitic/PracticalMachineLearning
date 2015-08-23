@@ -1,0 +1,136 @@
+---
+title: "Practical Machine Learning - Course Project"
+date: "Aug 23, 2015"
+output:
+  html_document:
+    toc: yes
+---
+
+## Summary
+
+Given the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who were asked to perform barbell lifts correctly and incorrectly in 5 different ways, the goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. We're building a model which will then be used to make predictions of 20 different test cases. 
+
+## Loading the Data
+
+First we're loading training and testing data and 'caret' library which we're going to use in this project.
+
+```{r message=F, warning=F}
+library(caret)
+
+trainData <- read.csv("./data/pml-training.csv")
+testData <- read.csv("./data/pml-testing.csv")
+```
+
+As we want to use cross validation and estimate out of sample error, we are spliting the training data in 70:30 ratio randomly to a training and validation data set. Using 123 seed value for reproducibiliy.
+
+```{r}
+set.seed(123)
+
+inTrain <- createDataPartition(y=trainData$classe, p=0.7, list=F)
+
+trainingSet <- trainData[inTrain, ]
+validationSet <- trainData[-inTrain, ]
+```
+
+## Data Cleaning and Feature Creation
+
+Some of the variables are of no use to us, such as user_name, new_window etc and they would just affect our model negatively so we're removing them. These columns are: 
+ user_name
+ raw_timestamp_part_1
+ raw_timestamp_part_2
+ cvtd_timestamp
+ new_window
+ num_window
+
+So first 6 columns plus the first with seq numbers. 
+Also we're removing columns with nearly zero variance and those that are mostly NA (90%)
+
+Note that we're removing those same columns from the testing/validation set.
+
+
+```{r}
+# Removing the first 7 columns that don't affect prediction
+trainingSet <- trainingSet[, -(1:7)]
+validationSet <- validationSet[, -(1:7)]
+
+# Removing columns with nearly zero variance
+nearZeroVarInd <- nearZeroVar(trainingSet)
+trainingSet <- trainingSet[, -nearZeroVarInd]
+validationSet <- validationSet[, -nearZeroVarInd]
+
+# Removing columns those that are almost always NA
+NAindices <- sapply(trainingSet, function(x) mean(is.na(x))) > 0.90
+trainingSet <- trainingSet[, NAindices==F]
+validationSet <- validationSet[, NAindices==F]
+```
+
+## Model Building 
+Now creating a model to predict the classe using a Random Forest model which should give us a pretty good results.
+Also using a 3-fold cross-validation to select best model parameters.
+
+```{r warning=F}
+fitControl <- trainControl(method="cv", number=3, verboseIter=F)
+
+# Model fit
+fit <- train(classe ~ ., data=trainingSet, method="rf", trControl=fitControl)
+
+# Shows final model tuning parameters
+fit$finalModel
+```
+
+## Model Evaluation
+
+To see how we did on out of sample data, we're now using validationSet to assess performance of our model.
+```{r}
+# Making predictions on validation set
+validationPredictions <- predict(fit, newdata=validationSet)
+
+# Confusion matrix
+confusionMatrix(validationSet$classe, validationPredictions)
+```
+
+The accuracy is 99.25% so the out-of-sample error is 0.75%.
+
+## Training the full model
+Because we're ok with our estimated out of sample error, we will now train the full model, with all the training data and use that model to make predictions on the real out of sample data. First we will clean the data in the sam way as we did before. 
+
+```{r message=F, warning=F}
+
+# Removing the first 7 columns that don't affect prediction
+train <- trainData[, -(1:7)]
+test <- testData[, -(1:7)]
+
+# Removing columns with nearly zero variance
+nearZeroVarInd <- nearZeroVar(train)
+train <- train[, -nearZeroVarInd]
+test <- test[, -nearZeroVarInd]
+
+# Removing columns those that are almost always NA
+NAindices <- sapply(train, function(x) mean(is.na(x))) > 0.90
+train <- train[, NAindices==F]
+test <- test[, NAindices==F]
+
+# Model fit
+fitControl <- trainControl(method="cv", number=3, verboseIter=F)
+fit <- train(classe ~ ., data=train, method="rf", trControl=fitControl)
+```
+
+## Making Predictions
+Applying the machine learning model to each of the 20 test cases in the testing data set.
+```{r}
+# Predicting on a test set
+predictions <- predict(fit, newdata=test)
+predictions <- as.character(predictions)
+
+# Function to write predictions to files
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+# Creating prediction files for submission
+pml_write_files(predictions)
+```
